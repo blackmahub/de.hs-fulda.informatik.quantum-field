@@ -3,85 +3,128 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy as sp
 
-CONST_Dimension1 = 2
-CONST_Dimension2 = 5
-CONST_Dimension3 = 5
-CONST_Dimension4 = 5
+# initial dimension sizes
+CONST_Dimension1 = 20
+CONST_Dimension2 = 20
+CONST_Dimension3 = 20
+CONST_Dimension4 = 20
+CONST_Volume = CONST_Dimension1 * CONST_Dimension2 * CONST_Dimension3 * CONST_Dimension4
 
-CONST_FieldMin = -0.001
-CONST_FieldMax = 0.001
+# max and min for each point
+CONST_FieldMin = -10
+CONST_FieldMax = 10
 
-temp_LagrangianDensity = 5
-#arr = np.random.uniform(CONST_FieldMin, CONST_FieldMax, size = (CONST_Dimension1, CONST_Dimension2, CONST_Dimension3, CONST_Dimension4))
-map
-# a = np.multiply(a, temp_LagrangianDensity)
-# print(a)
-# sum = a.sum()
-# print(sum)
-# print(arr)
-m = 1
-# S = 0
-# for t in range(CONST_Dimension1):
-#     for x in range(CONST_Dimension2):
-#         for y in range(CONST_Dimension3):
-#             for z in range(CONST_Dimension4):
-#                 tFactor = (arr[t+1, x, y, z] if t < CONST_Dimension1 - 1 else 0) + (arr[t-1, x, y, z] if t > 0 else 0) - (2 * arr[t,x,y,z])
-#                 xFactor = (arr[t, x+1, y, z] if x < CONST_Dimension2 - 1 else 0) + (arr[t, x-1, y, z] if x > 0 else 0) - (2 * arr[t,x,y,z])
-#                 yFactor = (arr[t, x, y+1, z] if y < CONST_Dimension3 - 1 else 0) + (arr[t, x, y-1, z] if y > 0 else 0) - (2 * arr[t,x,y,z])
-#                 zFactor = (arr[t, x, y, z+1] if z < CONST_Dimension4 - 1 else 0) + (arr[t, x, y, z-1] if z > 0 else 0) - (2 * arr[t,x,y,z])
-#                 S += tFactor + xFactor + yFactor + zFactor + (m**2/2)*(arr[t,x,y,z]**2)
-#                 print("arr["+str(t)+","+str(x)+","+str(y)+","+str(z)+"]: " + str(arr[t,x,y,z]))
-#                 print("S: "+ str(S))
+# constant mass
+CONST_m = 1
 
-def calculate():
-    arr = np.random.uniform(CONST_FieldMin, CONST_FieldMax, size = (CONST_Dimension1, CONST_Dimension2, CONST_Dimension3, CONST_Dimension4))
-    print("Dimension: " + str(arr.ndim))
-    print("Size: " + str(arr.size))
-    print("Shape: " + str(arr.shape))
-    #print("SUM: " + str(arr.sum()))
-    
-    #t0 = time.time()
-    S2 = 0
+# convolution kernel
+CONST_ConvKernel = [1, -2, 1]
+
+# initial empty lattice. This will be dynamically generated later
+arr = np.empty([CONST_Dimension1, CONST_Dimension2, CONST_Dimension3, CONST_Dimension4])
+
+# random lattice generation
+def define_lattice():
+    global arr 
+    arr = np.random.uniform(CONST_FieldMin, CONST_FieldMax, size = (CONST_Dimension1, CONST_Dimension2, CONST_Dimension3, CONST_Dimension4))    
+
+
+# increasing volume of lattice for comparison
+def increase_dimension_sizes(factor):
+    global CONST_Dimension1 
+    CONST_Dimension1 = int(CONST_Dimension1 * factor)
+    global CONST_Dimension2 
+    CONST_Dimension2 = int(CONST_Dimension2 * factor)
+    global CONST_Dimension3
+    CONST_Dimension3 = int(CONST_Dimension3 * factor)
+    global CONST_Dimension4
+    CONST_Dimension4 = int(CONST_Dimension4 * factor)
+    define_lattice()  
+
+
+# calculating action by nested for loops, normalizing by volume
+def calculate_action_loop():
+    S = 0
     for t in range(CONST_Dimension1):
         for x in range(CONST_Dimension2):
             for y in range(CONST_Dimension3):
                 for z in range(CONST_Dimension4):
-                    tFactor = (arr[t+1, x, y, z] if t < CONST_Dimension1 - 1 else 0) + (arr[t-1, x, y, z] if t > 0 else 0) #- (2 * arr[t,x,y,z])
-                    xFactor = (arr[t, x+1, y, z] if x < CONST_Dimension2 - 1 else 0) + (arr[t, x-1, y, z] if x > 0 else 0) #- (2 * arr[t,x,y,z])
-                    yFactor = (arr[t, x, y+1, z] if y < CONST_Dimension3 - 1 else 0) + (arr[t, x, y-1, z] if y > 0 else 0) #- (2 * arr[t,x,y,z])
-                    zFactor = (arr[t, x, y, z+1] if z < CONST_Dimension4 - 1 else 0) + (arr[t, x, y, z-1] if z > 0 else 0) #- (2 * arr[t,x,y,z])
-                    S2 += tFactor + xFactor + yFactor + zFactor - (8 * arr[t,x,y,z]) + (m**2/2)*(arr[t,x,y,z]**2)
-                    #print("arr["+str(t)+","+str(x)+","+str(y)+","+str(z)+"]: " + str(arr[t,x,y,z]))
-
-    S2 /= (CONST_Dimension1 * CONST_Dimension2 * CONST_Dimension3 * CONST_Dimension4)
-    print("S2: "+ str(S2))
-    #print("Time: "+ str(time.time() - t0))
-
-    # t0 = time.time()
-    # S2 = 0
-    # for (t, x, y, z) in itertools.product(range(CONST_Dimension1), range(CONST_Dimension2), range(CONST_Dimension3), range(CONST_Dimension4)):
-    #     tFactor = (arr[t+1, x, y, z] if t < CONST_Dimension1 - 1 else 0) + (arr[t-1, x, y, z] if t > 0 else 0) #- (2 * arr[t,x,y,z])
-    #     xFactor = (arr[t, x+1, y, z] if x < CONST_Dimension2 - 1 else 0) + (arr[t, x-1, y, z] if x > 0 else 0) #- (2 * arr[t,x,y,z])
-    #     yFactor = (arr[t, x, y+1, z] if y < CONST_Dimension3 - 1 else 0) + (arr[t, x, y-1, z] if y > 0 else 0) #- (2 * arr[t,x,y,z])
-    #     zFactor = (arr[t, x, y, z+1] if z < CONST_Dimension4 - 1 else 0) + (arr[t, x, y, z-1] if z > 0 else 0) #- (2 * arr[t,x,y,z])
-    #     S2 += tFactor + xFactor + yFactor + zFactor - (8 * arr[t,x,y,z]) + (m**2/2)*(arr[t,x,y,z]**2)
-
-    # print("itertools S2: "+ str(S2))
-    # print("itertools Time: "+ str(time.time() - t0))
-
-    return S2
+                    tFactor = (arr[t+1, x, y, z] if t < CONST_Dimension1 - 1 else arr[0,x,y,z]) + (arr[t-1, x, y, z] if t > 0 else arr[CONST_Dimension1 - 1, x, y, z]) #- (2 * arr[t,x,y,z])
+                    xFactor = (arr[t, x+1, y, z] if x < CONST_Dimension2 - 1 else arr[t,0,y,z]) + (arr[t, x-1, y, z] if x > 0 else arr[t, CONST_Dimension2 - 1, y, z]) #- (2 * arr[t,x,y,z])
+                    yFactor = (arr[t, x, y+1, z] if y < CONST_Dimension3 - 1 else arr[t,x,0,z]) + (arr[t, x, y-1, z] if y > 0 else arr[t, x, CONST_Dimension3 - 1, z]) #- (2 * arr[t,x,y,z])
+                    zFactor = (arr[t, x, y, z+1] if z < CONST_Dimension4 - 1 else arr[t,x,y,0]) + (arr[t, x, y, z-1] if z > 0 else arr[t, x, y, CONST_Dimension4 - 1]) #- (2 * arr[t,x,y,z])
+                    # tFactor = (arr[t+1, x, y, z] if t < CONST_Dimension1 - 1 else 0) + (arr[t-1, x, y, z] if t > 0 else 0) - (2 * arr[t,x,y,z])
+                    # xFactor = (arr[t, x+1, y, z] if x < CONST_Dimension2 - 1 else 0) + (arr[t, x-1, y, z] if x > 0 else 0) - (2 * arr[t,x,y,z])
+                    # yFactor = (arr[t, x, y+1, z] if y < CONST_Dimension3 - 1 else 0) + (arr[t, x, y-1, z] if y > 0 else 0) - (2 * arr[t,x,y,z])
+                    # zFactor = (arr[t, x, y, z+1] if z < CONST_Dimension4 - 1 else 0) + (arr[t, x, y, z-1] if z > 0 else 0) - (2 * arr[t,x,y,z])
+                    S += tFactor + xFactor + yFactor + zFactor - (8 * arr[t,x,y,z]) + (CONST_m**2/2)*(arr[t,x,y,z]**2)
     
+    S /= CONST_Volume
+    print("S_Loop: "+ str(S))
+    return S
 
-actions = []
-for count in range(10):
-    actions.append(calculate())
 
-#print(actions)
+# calculating action by roll, normalizing by volume
+def calculate_action_roll():
 
-fig = plt.figure(figsize=(50,50))
-ax = plt.axes()
+    tLeft = np.roll(arr, -1, axis = 1)
+    tRight = np.roll(arr, 1, axis = 1)
 
-ax.plot(range(len(actions)), actions)
-plt.scatter(range(len(actions)), actions)
-plt.show()
+    xLeft = np.roll(arr, -1, axis = 0)
+    xRight = np.roll(arr, 1, axis = 0)
+
+    yLeft = np.roll(arr, -1, axis = 2)
+    yRight = np.roll(arr, 1, axis = 2)
+
+    zLeft = np.roll(arr, -1, axis = 3)
+    zRight = np.roll(arr, 1, axis = 3)
+
+    common =  arr * (-8 + (CONST_m**2/2) * arr)
+    
+    total = tLeft + tRight + xLeft + xRight + yLeft + yRight + zLeft + zRight + common    
+    S= total.sum() / CONST_Volume
+
+    print("S_Roll: " + str(S))
+    return S
+
+
+# plot comparison graph
+def plot_graph(volumes, loop_times, roll_times):
+    return 0
+
+# main function
+def main():
+    volumes = []
+    loop_actions = []
+    loop_times = []
+    roll_actions = []
+    roll_times = []
+    for count in range(3):
+
+        print("Dimension: " + str(arr.ndim))
+        print("Size: " + str(arr.size))
+        volumes.append(arr.size)
+        print("Shape: " + str(arr.shape))
+
+        t0 = time.time()        
+        loop_actions.append(calculate_action_loop())
+        tf = time.time() - t0
+        loop_times.append(tf)
+        print("Loop_Time: "+ str(tf))    
+
+        t0 = time.time()        
+        roll_actions.append(calculate_action_roll())
+        tf = time.time() - t0
+        roll_times.append(tf)    
+        print("Roll_Time: "+ str(tf))    
+        print()
+
+        increase_dimension_sizes(1.5)    
+
+    plot_graph(volumes, loop_times, roll_times)
+        
+            
+if __name__ == "__main__":
+    main()
