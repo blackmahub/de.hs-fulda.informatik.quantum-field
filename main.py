@@ -110,12 +110,12 @@ def calculate_action_tf():
     
     total = tleft + tright + xleft + xright + yleft + yright + zleft + zright + common 
     S= tF.reduce_sum(total) / CONST_Volume
-    S= tF.Print(S,[S], message="Tensor roll")
+    S= tF.Print(S,[S], message="T_Roll: ")
     S.eval()
     return S
 
 # plot comparison graph
-def plot_graph(volumes, loop_times, roll_times):
+def plot_graph(volumes, loop_times, roll_times, tensor_roll_times):
 
     ax1 = plt.subplot(311)
     ax1.set_title("Loop Times vs Volumes")
@@ -140,6 +140,8 @@ def main():
     loop_times = []
     roll_actions = []
     roll_times = []
+    tensor_roll_actions = []
+    tensor_roll_times = []
     for count in range(3):
 
         print("Dimension: " + str(arr.ndim))
@@ -160,15 +162,15 @@ def main():
         print("Roll_Time: "+ str(tf))
 
         t0 = time.time()        
-        roll_actions.append(calculate_action_tf())
+        tensor_roll_actions.append(calculate_action_tf())
         tf = time.time() - t0
-        roll_times.append(tf)    
+        tensor_roll_times.append(tf)    
         print("Tensor_Time: "+ str(tf))
         print()
 
         increase_dimension_sizes(1.5)
 
-    plot_graph(volumes, loop_times, roll_times)
+    plot_graph(volumes, loop_times, roll_times, tensor_roll_times)
         
             
 if __name__ == "__main__":
