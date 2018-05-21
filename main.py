@@ -4,6 +4,8 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 # import scipy as sp
+import tensorflow as tF
+sess = tF.InteractiveSession()
 
 # initial dimension sizes
 CONST_Dimension1 = 20
@@ -89,6 +91,28 @@ def calculate_action_roll():
     print("S_Roll: " + str(S))
     return S
 
+# calculating using tensorflow
+def calculate_action_tf():
+
+    tleft = tF.manip.roll(arr,shift= -1,axis= 1)
+    tright = tF.manip.roll(arr,shift= 1,axis= 1)
+
+    xleft = tF.manip.roll(arr,shift= -1,axis= 0)
+    xright = tF.manip.roll(arr,shift= 1,axis= 0)
+
+    yleft = tF.manip.roll(arr,shift=-1,axis= 2)
+    yright = tF.manip.roll(arr,shift= 1,axis= 2)
+
+    zleft = tF.manip.roll(arr,shift= -1,axis= 3)
+    zright = tF.manip.roll(arr,shift= 1,axis= 3)
+
+    common =  arr * (-8 + (CONST_m**2/2) * arr)
+    
+    total = tleft + tright + xleft + xright + yleft + yright + zleft + zright + common 
+    S= tF.reduce_sum(total) / CONST_Volume
+    S= tF.Print(S,[S], message="Tensor roll")
+    S.eval()
+    return S
 
 # plot comparison graph
 def plot_graph(volumes, loop_times, roll_times):
@@ -134,6 +158,12 @@ def main():
         tf = time.time() - t0
         roll_times.append(tf)
         print("Roll_Time: "+ str(tf))
+
+        t0 = time.time()        
+        roll_actions.append(calculate_action_tf())
+        tf = time.time() - t0
+        roll_times.append(tf)    
+        print("Tensor_Time: "+ str(tf))
         print()
 
         increase_dimension_sizes(1.5)
