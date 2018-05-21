@@ -1,9 +1,9 @@
-import itertools
+# import itertools
 import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
+# import scipy as sp
 
 # initial dimension sizes
 CONST_Dimension1 = 20
@@ -92,7 +92,22 @@ def calculate_action_roll():
 
 # plot comparison graph
 def plot_graph(volumes, loop_times, roll_times):
-    return 0
+
+    ax1 = plt.subplot(311)
+    ax1.set_title("Loop Times vs Volumes")
+    ax1.set_xlabel("Volumes")
+    ax1.set_ylabel("Times in Second")
+    plt.plot(volumes, loop_times)
+    plt.setp(ax1.get_xticklabels())
+
+    ax2 = plt.subplot(312, sharex=ax1)
+    ax2.set_title("Roll Times vs Volumes")
+    ax2.set_xlabel("Volumes")
+    ax2.set_ylabel("Times in Second")
+    plt.plot(volumes, roll_times)
+
+    plt.xlim(0, np.amax(volumes))
+    plt.show()
 
 # main function
 def main():
@@ -108,20 +123,20 @@ def main():
         volumes.append(arr.size)
         print("Shape: " + str(arr.shape))
 
-        t0 = time.time()        
+        t0 = time.time()
         loop_actions.append(calculate_action_loop())
         tf = time.time() - t0
         loop_times.append(tf)
-        print("Loop_Time: "+ str(tf))    
+        print("Loop_Time: "+ str(tf))
 
-        t0 = time.time()        
+        t0 = time.time()
         roll_actions.append(calculate_action_roll())
         tf = time.time() - t0
-        roll_times.append(tf)    
-        print("Roll_Time: "+ str(tf))    
+        roll_times.append(tf)
+        print("Roll_Time: "+ str(tf))
         print()
 
-        increase_dimension_sizes(1.5)    
+        increase_dimension_sizes(1.5)
 
     plot_graph(volumes, loop_times, roll_times)
         
