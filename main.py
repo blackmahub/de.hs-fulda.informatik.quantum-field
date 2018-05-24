@@ -107,8 +107,8 @@ def calculate_action_tf():
     zright = tF.manip.roll(arr,shift= 1,axis= 3)
 
     common =  arr * (-8 + (CONST_m**2/2) * arr)
-    
-    total = tleft + tright + xleft + xright + yleft + yright + zleft + zright + common 
+
+    total = tleft + tright + xleft + xright + yleft + yright + zleft + zright + common
     S= tF.reduce_sum(total) / CONST_Volume
     S= tF.Print(S,[S], message="T_Roll: ")
     S.eval()
@@ -129,6 +129,12 @@ def plot_graph(volumes, loop_times, roll_times, tensor_roll_times):
     ax2.set_xlabel("Volumes")
     ax2.set_ylabel("Times in Second")
     plt.plot(volumes, roll_times)
+
+    ax3 = plt.subplot(313, sharex=ax1)
+    ax3.set_title("Tensor Times vs Volumes")
+    ax3.set_xlabel("Volumes")
+    ax3.set_ylabel("Times in Second")
+    plt.plot(volumes, tensor_roll_times)
 
     plt.xlim(0, np.amax(volumes))
     plt.show()
