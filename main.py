@@ -116,28 +116,45 @@ def calculate_action_tf():
 
 # plot comparison graph
 def plot_graph(volumes, loop_times, roll_times, tensor_roll_times):
+    n_groups = len(volumes)
+    fig, ax = plt.subplots()
+    index = np.arange(n_groups)
+    bar_width = 0.2
+    opacity = 0.9
 
-    ax1 = plt.subplot(311)
-    ax1.set_title("Loop Times vs Volumes")
-    ax1.set_xlabel("Volumes")
-    ax1.set_ylabel("Times in Second")
-    plt.plot(volumes, loop_times)
-    plt.setp(ax1.get_xticklabels())
+    rects1 = ax.bar(index, loop_times, bar_width,
+                    alpha=opacity, color='b',
+                    label='Nested For Loops')
 
-    ax2 = plt.subplot(312, sharex=ax1)
-    ax2.set_title("Roll Times vs Volumes")
-    ax2.set_xlabel("Volumes")
-    ax2.set_ylabel("Times in Second")
-    plt.plot(volumes, roll_times)
+    rects2 = ax.bar(index + bar_width, roll_times, bar_width,
+                    alpha=opacity, color='r',
+                    label='Numpy Roll')
 
-    ax3 = plt.subplot(313, sharex=ax1)
-    ax3.set_title("Tensor Times vs Volumes")
-    ax3.set_xlabel("Volumes")
-    ax3.set_ylabel("Times in Second")
-    plt.plot(volumes, tensor_roll_times)
+    rects3 = ax.bar(index + 2 * bar_width, tensor_roll_times, bar_width,
+                    alpha=opacity, color='g',
+                    label='Tensorflow Roll')
 
-    plt.xlim(0, np.amax(volumes))
+    ax.set_xlabel('Volume')
+    ax.set_ylabel('Time (in s)')
+    ax.set_title('Times by Volumes')
+    ax.set_xticks(index + bar_width)
+    ax.set_xticklabels(volumes)
+    ax.legend()
+    fig.tight_layout()
+
+    autolabel(ax, rects1)
+    autolabel(ax, rects2)
+    autolabel(ax, rects3)
+
     plt.show()
+
+# Attach a text label above each bar displaying its height
+def autolabel(ax, rects):
+    for rect in rects:
+        height = rect.get_height()
+        ax.text(rect.get_x() + rect.get_width() / 2., 1.005 * height,
+                str(round(height, 3)),
+                ha='center', va='bottom')
 
 # main function
 def main():
