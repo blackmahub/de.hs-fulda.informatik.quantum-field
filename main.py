@@ -3,7 +3,7 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-# import scipy as sp
+import scipy as sp
 import tensorflow as tF
 sess = tF.InteractiveSession()
 
@@ -22,7 +22,14 @@ CONST_FieldMax = 10
 CONST_m = 1
 
 # convolution kernel
-CONST_ConvKernel = [1, -2, 1]
+CONST_ConvKernelt = np.zeros([3,1,1,1])
+CONST_ConvKernelt [:,0,0,0] = [1,-2,1]
+CONST_ConvKernelx = np.zeros([1,3,1,1])
+CONST_ConvKernelx [0,:,0,0] = [1,-2,1]
+CONST_ConvKernely = np.zeros([1,1,3,1])
+CONST_ConvKernely [0,0,:,0] = [1,-2,1]
+CONST_ConvKernelz = np.zeros([1,1,1,3])
+CONST_ConvKernelz [0,0,0,:] = [1,-2,1]
 
 # initial empty lattice. This will be dynamically generated later
 arr = np.empty([CONST_Dimension1, CONST_Dimension2, CONST_Dimension3, CONST_Dimension4])
@@ -91,6 +98,7 @@ def calculate_action_roll():
     print("S_Roll: " + str(S))
     return S
 
+
 # calculating using tensorflow
 def calculate_action_tf():
 
@@ -110,12 +118,25 @@ def calculate_action_tf():
 
     total = tleft + tright + xleft + xright + yleft + yright + zleft + zright + common
     S= tF.reduce_sum(total) / CONST_Volume
-    S= tF.Print(S,[S], message="T_Roll: ")
+    #S= tF.Print(S,[S], message="T_Roll: ")
     S.eval()
     return S
 
+
+# calculating using convolution
+def calculate_action_convolve():
+    convarrt = sp.ndimage.filters.convolve(arr, CONST_ConvKernelt, mode = 'wrap')
+    convarrx = sp.ndimage.filters.convolve(arr, CONST_ConvKernelx, mode = 'wrap')
+    convarry = sp.ndimage.filters.convolve(arr, CONST_ConvKernely, mode = 'wrap')
+    convarrz = sp.ndimage.filters.convolve(arr, CONST_ConvKernelz, mode = 'wrap')
+    common =  arr * ((CONST_m**2/2) * arr)
+    S = (convarrt + convarrx + convarry + convarrz + common).sum() / CONST_Volume
+    print("S_Convolve: " + str(S))
+    return S
+
+
 # plot comparison graph
-def plot_graph(volumes, loop_times, roll_times, tensor_roll_times):
+def plot_graph(volumes, loop_times, roll_times, tensor_roll_times, conv_times):
     n_groups = len(volumes)
     fig, ax = plt.subplots()
     index = np.arange(n_groups)
@@ -128,11 +149,15 @@ def plot_graph(volumes, loop_times, roll_times, tensor_roll_times):
 
     rects2 = ax.bar(index + bar_width, roll_times, bar_width,
                     alpha=opacity, color='r',
-                    label='Numpy Roll')
+                    label='NumPy Roll')
 
     rects3 = ax.bar(index + 2 * bar_width, tensor_roll_times, bar_width,
                     alpha=opacity, color='g',
                     label='Tensorflow Roll')
+
+    rects4 = ax.bar(index + 3 * bar_width, conv_times, bar_width,
+                    alpha=opacity, color='c',
+                    label='SciPy Convolve')
 
     ax.set_xlabel('Volume')
     ax.set_ylabel('Time (in s)')
@@ -145,6 +170,7 @@ def plot_graph(volumes, loop_times, roll_times, tensor_roll_times):
     autolabel(ax, rects1)
     autolabel(ax, rects2)
     autolabel(ax, rects3)
+    autolabel(ax, rects4)
 
     plt.show()
 
@@ -165,7 +191,9 @@ def main():
     roll_times = []
     tensor_roll_actions = []
     tensor_roll_times = []
-    for count in range(3):
+    conv_actions = []
+    conv_times = []
+    for count in range(2):
 
         print("Dimension: " + str(arr.ndim))
         print("Size: " + str(arr.size))
@@ -189,11 +217,17 @@ def main():
         tf = time.time() - t0
         tensor_roll_times.append(tf)    
         print("Tensor_Time: "+ str(tf))
+
+        t0 = time.time()        
+        conv_actions.append(calculate_action_tf())
+        tf = time.time() - t0
+        conv_times.append(tf)    
+        print("Conv_Time: "+ str(tf))
         print()
 
         increase_dimension_sizes(1.5)
 
-    plot_graph(volumes, loop_times, roll_times, tensor_roll_times)
+    plot_graph(volumes, loop_times, roll_times, tensor_roll_times, conv_times)
         
             
 if __name__ == "__main__":
