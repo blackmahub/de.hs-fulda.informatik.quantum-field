@@ -100,8 +100,9 @@ def calculate_action_roll():
 
 
 # calculating using tensorflow
-def calculate_action_tf():
+def define_tf_graph():
 
+    arr = tF.placeholder(shape=[None,None,None,None],dtype=tF.float64)
     tleft = tF.manip.roll(arr,shift= -1,axis= 1)
     tright = tF.manip.roll(arr,shift= 1,axis= 1)
 
@@ -117,11 +118,13 @@ def calculate_action_tf():
     common =  arr * (-8 + (CONST_m**2/2) * arr)
 
     total = tleft + tright + xleft + xright + yleft + yright + zleft + zright + common
-    S= tF.reduce_sum(total) / CONST_Volume
-    #S= tF.Print(S,[S], message="T_Roll: ")
-    S.eval()
-    return S
+    S = tF.reduce_sum(total) / CONST_Volume
+    #S = tF.Print(S,[S], message="T_Roll: ")
+    return S,arr
 
+def calculate_action_tf(sess,S,placeholder,data):
+  return sess.run([S],feed_dict = {placeholder:data})[0]
+  
 
 # calculating using convolution
 def calculate_action_convolve():
@@ -184,6 +187,8 @@ def autolabel(ax, rects):
 
 # main function
 def main():
+    define_lattice()
+    STF,plTF = define_tf_graph()
     volumes = []
     loop_actions = []
     loop_times = []
@@ -193,7 +198,7 @@ def main():
     tensor_roll_times = []
     conv_actions = []
     conv_times = []
-    for count in range(2):
+    for count in range(3):
 
         print("Dimension: " + str(arr.ndim))
         print("Size: " + str(arr.size))
@@ -213,13 +218,13 @@ def main():
         print("Roll_Time: "+ str(tf))
 
         t0 = time.time()        
-        tensor_roll_actions.append(calculate_action_tf())
+        tensor_roll_actions.append(calculate_action_tf(sess,STF,plTF,arr))
         tf = time.time() - t0
         tensor_roll_times.append(tf)    
         print("Tensor_Time: "+ str(tf))
 
         t0 = time.time()        
-        conv_actions.append(calculate_action_tf())
+        conv_actions.append(calculate_action_convolve())
         tf = time.time() - t0
         conv_times.append(tf)    
         print("Conv_Time: "+ str(tf))
