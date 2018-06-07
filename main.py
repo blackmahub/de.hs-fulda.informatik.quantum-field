@@ -8,7 +8,7 @@ import tensorflow as tF
 sess = tF.InteractiveSession()
 
 # initial dimension sizes
-CONST_N = 100
+CONST_N = 10
 CONST_Dimension1 = 20
 CONST_Dimension2 = 20
 CONST_Dimension3 = 20
@@ -108,32 +108,36 @@ def calculate_action_roll():
 
 
 # calculating using tensorflow
-def define_tf_graph():
+def define_tf_roll(arr):
+    tleft = tF.manip.roll(arr, shift=-1, axis=1)
+    tright = tF.manip.roll(arr, shift=1, axis=1)
 
-    arr = tF.placeholder(shape=[None,None,None,None],dtype=tF.float64)
-    tleft = tF.manip.roll(arr,shift= -1,axis= 1)
-    tright = tF.manip.roll(arr,shift= 1,axis= 1)
+    xleft = tF.manip.roll(arr, shift=-1, axis=0)
+    xright = tF.manip.roll(arr, shift=1, axis=0)
 
-    xleft = tF.manip.roll(arr,shift= -1,axis= 0)
-    xright = tF.manip.roll(arr,shift= 1,axis= 0)
+    yleft = tF.manip.roll(arr, shift=-1, axis=2)
+    yright = tF.manip.roll(arr, shift=1, axis=2)
 
-    yleft = tF.manip.roll(arr,shift=-1,axis= 2)
-    yright = tF.manip.roll(arr,shift= 1,axis= 2)
+    zleft = tF.manip.roll(arr, shift=-1, axis=3)
+    zright = tF.manip.roll(arr, shift=1, axis=3)
 
-    zleft = tF.manip.roll(arr,shift= -1,axis= 3)
-    zright = tF.manip.roll(arr,shift= 1,axis= 3)
-
-    common =  arr * (-8 + (CONST_m**2/2) * arr)
+    common = arr * (-8 + (CONST_m ** 2 / 2) * arr)
 
     total = tleft + tright + xleft + xright + yleft + yright + zleft + zright + common
-    S = tF.reduce_sum(total) / CONST_Volume
-    #S = tF.Print(S,[S], message="T_Roll: ")
-    return S,arr
+
+    return tF.reduce_sum(total) / CONST_Volume
+
+
+def define_tf_graph():
+    arr = tF.placeholder(dtype=tF.float64)
+    S = tF.map_fn(lambda a: define_tf_roll(a), arr[:, ])
+
+    return S, arr
 
 
 def calculate_action_tf(sess, S, placeholder_dict, action_name):
     tf_action = sess.run([S], feed_dict=placeholder_dict)[0]
-    # print("S_TF_%s: %s" % (action_name, str(tf_action)))
+    print("S_TF_%s: %s" % (action_name, str(tf_action)))
     return tf_action
 
 
@@ -152,6 +156,19 @@ def calculate_action_convolve():
         # print("S_Convolve: " + str(S))
     return Sum
 
+def define_tf_convolution_for_1_lattice(arr, imag_zeros, kernel_t_fft, kernel_x_fft, kernel_y_fft, kernel_z_fft):
+    arr_fft = tF.fft(tF.complex(arr, imag_zeros))
+
+    conv_axis_0 = tF.real(tF.ifft(arr_fft * kernel_t_fft))
+    conv_axis_1 = tF.real(tF.ifft(arr_fft * kernel_x_fft))
+    conv_axis_2 = tF.real(tF.ifft(arr_fft * kernel_y_fft))
+    conv_axis_3 = tF.real(tF.ifft(arr_fft * kernel_z_fft))
+
+    common = arr * ((CONST_m ** 2 / 2) * arr)
+
+    return tF.reduce_sum(conv_axis_0 + conv_axis_1 + conv_axis_2 + conv_axis_3 + common) / CONST_Volume
+
+
 def define_tf_convolution():
     placeholder_arr = tF.placeholder(tF.float32)
     placeholder_kernel_t = tF.placeholder(tF.float32)
@@ -160,19 +177,13 @@ def define_tf_convolution():
     placeholder_kernel_z = tF.placeholder(tF.float32)
     placeholder_imag_zeros = tF.placeholder(tF.float32)
 
-    arr_fft = tF.fft(tF.complex(placeholder_arr, placeholder_imag_zeros))
     kernel_t_fft = tF.fft(tF.complex(placeholder_kernel_t, placeholder_imag_zeros))
     kernel_x_fft = tF.fft(tF.complex(placeholder_kernel_x, placeholder_imag_zeros))
     kernel_y_fft = tF.fft(tF.complex(placeholder_kernel_y, placeholder_imag_zeros))
     kernel_z_fft = tF.fft(tF.complex(placeholder_kernel_z, placeholder_imag_zeros))
 
-    conv_axis_0 = tF.real(tF.ifft(arr_fft * kernel_t_fft))
-    conv_axis_1 = tF.real(tF.ifft(arr_fft * kernel_x_fft))
-    conv_axis_2 = tF.real(tF.ifft(arr_fft * kernel_y_fft))
-    conv_axis_3 = tF.real(tF.ifft(arr_fft * kernel_z_fft))
-
-    common = placeholder_arr * ((CONST_m ** 2 / 2) * placeholder_arr)
-    conv_action = tF.reduce_sum(conv_axis_0 + conv_axis_1 + conv_axis_2 + conv_axis_3 + common) / CONST_Volume
+    conv_action = tF.map_fn(lambda a: define_tf_convolution_for_1_lattice(a, placeholder_imag_zeros, \
+                                                            kernel_t_fft, kernel_x_fft, kernel_y_fft, kernel_z_fft), placeholder_arr[:, ])
 
     return conv_action, placeholder_arr, placeholder_kernel_t, placeholder_kernel_x, \
            placeholder_kernel_y, placeholder_kernel_z, placeholder_imag_zeros
@@ -270,10 +281,11 @@ def main():
         roll_times.append(tf)
         # print("Roll_Time: "+ str(tf))
 
-        # t0 = time.time()        
+        t0 = time.time()
         # tensor_roll_actions.append(calculate_action_tf(sess, STF, {plTF: arr}, "Roll"))
-        # tf = time.time() - t0
-        # tensor_roll_times.append(tf)    
+        calculate_action_tf(sess, STF, {plTF: arr}, "Roll")
+        tf = time.time() - t0
+        tensor_roll_times.append(tf)
         # print("Tensor_Roll_Time: "+ str(tf))
 
         t0 = time.time()
@@ -283,27 +295,29 @@ def main():
         conv_times.append(tf)
         # print("Conv_Time: "+ str(tf))
 
-        # t0 = time.time()
-        # kernel_t = np.zeros(arr.shape, dtype=np.float32)
-        # kernel_t[0:3, 0, 0, 0] = [1, -2, 1]
-        # kernel_x = np.zeros(arr.shape, dtype=np.float32)
-        # kernel_x[0, 0:3, 0, 0] = [1, -2, 1]
-        # kernel_y = np.zeros(arr.shape, dtype=np.float32)
-        # kernel_y[0, 0, 0:3, 0] = [1, -2, 1]
-        # kernel_z = np.zeros(arr.shape, dtype=np.float32)
-        # kernel_z[0, 0, 0, 0:3] = [1, -2, 1]
-        # imag_zeros = np.zeros(arr.shape, dtype=np.float32)
-        # placeholder_dict = {
-        #     placeholder_conv: arr,
-        #     placeholder_kernel_t: kernel_t,
-        #     placeholder_kernel_x: kernel_x,
-        #     placeholder_kernel_y: kernel_y,
-        #     placeholder_kernel_z: kernel_z,
-        #     placeholder_imag_zeros: imag_zeros
-        # }
+        t0 = time.time()
+        kernel_shape = arr[0].shape
+        kernel_t = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_t[0:3, 0, 0, 0] = [1, -2, 1]
+        kernel_x = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_x[0, 0:3, 0, 0] = [1, -2, 1]
+        kernel_y = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_y[0, 0, 0:3, 0] = [1, -2, 1]
+        kernel_z = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_z[0, 0, 0, 0:3] = [1, -2, 1]
+        imag_zeros = np.zeros(kernel_shape, dtype=np.float32)
+        placeholder_dict = {
+            placeholder_conv: arr,
+            placeholder_kernel_t: kernel_t,
+            placeholder_kernel_x: kernel_x,
+            placeholder_kernel_y: kernel_y,
+            placeholder_kernel_z: kernel_z,
+            placeholder_imag_zeros: imag_zeros
+        }
         # tensor_conv_actions.append(calculate_action_tf(sess, tf_conv, placeholder_dict, "Convolution"))
-        # tf = time.time() - t0
-        # tensor_conv_times.append(tf)
+        calculate_action_tf(sess, tf_conv, placeholder_dict, "Convolution")
+        tf = time.time() - t0
+        tensor_conv_times.append(tf)
         # print("Tensor_Convolution_Time: " + str(tf))
         print()
 
