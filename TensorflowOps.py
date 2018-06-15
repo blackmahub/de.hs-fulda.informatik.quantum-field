@@ -3,24 +3,20 @@ import ConvKernels as ck
 import tensorflow as tF
 import numpy as np
 
+import time as t
+
 class TensorflowOps:
     sess = tF.InteractiveSession()
-    # kernel_t_fft, kernel_x_fft, kernel_y_fft, kernel_z_fft, imag_zeros
 
     def __init__(self):
-        self.initialize_kernels()
-    
-    def initialize_kernels(self):
-        kernels = ck.ConvKernels()
-        self.imag_zeros = tF.Variable(kernels.imag_zeros)
-        self.kernel_t_fft = tF.Variable(tF.fft(tF.complex(kernels.CONST_ConvKernelt, self.imag_zeros)))
-        self.kernel_x_fft = tF.Variable(tF.fft(tF.complex(kernels.CONST_ConvKernelx, self.imag_zeros)))
-        self.kernel_y_fft = tF.Variable(tF.fft(tF.complex(kernels.CONST_ConvKernely, self.imag_zeros)))
-        self.kernel_z_fft = tF.Variable(tF.fft(tF.complex(kernels.CONST_ConvKernelz, self.imag_zeros)))
-        tF.initialize_all_variables()
+        pass
+
 
     # calculating using tensorflow
-    def define_tf_roll(self, arr, CONST_m):
+    def define_tf_roll(self, CONST_m):
+        arr = tF.placeholder(dtype=tF.float64)
+        arr_size = tF.placeholder(dtype=tF.float64)
+
         tleft = tF.manip.roll(arr, shift=-1, axis=1)
         tright = tF.manip.roll(arr, shift=1, axis=1)
 
@@ -37,41 +33,49 @@ class TensorflowOps:
 
         total = tleft + tright + xleft + xright + yleft + yright + zleft + zright + common
 
-        print(total)
+        S = tF.reduce_sum(total) / arr_size
 
-        return tF.reduce_sum(total)
-
-
-    def define_tf_graph(self, CONST_m):
-        arr = tF.placeholder(dtype=tF.float64)
-        S = tF.map_fn(lambda a: self.define_tf_roll(a, CONST_m), arr[:, ])
-
-        return S, arr
+        return S, arr, arr_size
 
 
     def calculate_action_tf(self, S, placeholder_dict, action_name):
         tf_action = self.sess.run([S], feed_dict=placeholder_dict)[0]
-        print("S_TF_%s: %s" % (action_name, str(tf_action)))
+        # print("S_TF_%s: %s" % (action_name, str(tf_action)))
         return tf_action
 
 
-    def define_tf_convolution_for_1_lattice(self, arr, CONST_m):
-        arr_fft = tF.fft(tF.complex(arr, self.imag_zeros))
+    def calculate_action_tf_convolve(self, CONST_m, arr):
+        kernel_shape = arr.shape
 
-        conv_axis_0 = tF.real(tF.ifft(arr_fft * self.kernel_t_fft))
-        conv_axis_1 = tF.real(tF.ifft(arr_fft * self.kernel_x_fft))
-        conv_axis_2 = tF.real(tF.ifft(arr_fft * self.kernel_y_fft))
-        conv_axis_3 = tF.real(tF.ifft(arr_fft * self.kernel_z_fft))
+        kernel_t = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_t[:, 0:3, 0, 0, 0] = [1, -2, 1]
+        kernel_x = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_x[:, 0, 0:3, 0, 0] = [1, -2, 1]
+        kernel_y = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_y[:, 0, 0, 0:3, 0] = [1, -2, 1]
+        kernel_z = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_z[:, 0, 0, 0, 0:3] = [1, -2, 1]
 
-        common = arr * ((CONST_m ** 2 / 2) * arr)
+        imag_zeros = np.zeros(kernel_shape, dtype=np.float32)
 
-        return tF.reduce_sum(conv_axis_0 + conv_axis_1 + conv_axis_2 + conv_axis_3 + common) / CONST_Volume
+        arr_fft = tF.Variable(initial_value=tF.fft(tF.complex(arr, imag_zeros)), name="arr_fft")
 
+        conv_axis_1 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_t, imag_zeros)))), name="conv_axis_1")
+        conv_axis_2 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_x, imag_zeros)))), name="conv_axis_2")
+        conv_axis_3 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_y, imag_zeros)))), name="conv_axis_3")
+        conv_axis_4 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_z, imag_zeros)))), name="conv_axis_4")
 
-    def define_tf_convolution(self, CONST_m):
-        placeholder_arr = tF.placeholder(tF.float32)
+        common = tF.Variable(initial_value=arr * ((CONST_m ** 2 / 2) * arr), name="common")
 
-        conv_action = tF.map_fn(lambda a: self.define_tf_convolution_for_1_lattice(a, CONST_m), placeholder_arr[:, ])
+        self.sess.run(tF.global_variables_initializer())
 
-        return conv_action, placeholder_arr
+        conv_action = tF.reduce_sum(conv_axis_1 + conv_axis_2 + conv_axis_3 + conv_axis_4 + common) / arr.size
+
+        t0 = t.time()
+        result = self.sess.run(conv_action)
+        tf = t.time() - t0
+
+        # print("TF Conv: %s" % str(result))
+
+        return tf
 

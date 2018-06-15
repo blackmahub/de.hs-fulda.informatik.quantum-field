@@ -1,6 +1,6 @@
 import LoopOps as lo
 import PyOps as po
-#import TensorflowOps as to
+import TensorflowOps as to
 import RandomGenerator as rg
 import PlotGraphs as pg
 
@@ -17,7 +17,7 @@ def main():
     loop = lo.LoopOperations()
     pyops = po.PyOps()
     plot = pg.PlotGraphs()
-    #tens = to.TensorflowOps()
+    tens = to.TensorflowOps()
 
     CONST_m = 1
 
@@ -73,8 +73,13 @@ def main():
         time_values.append(tf)
     if not disable_tFroll:
         labels.append('Tensorflow Roll')
+        S, arr, arr_size = tens.define_tf_roll(CONST_m)
+        placeholder_dict = {
+            arr: randGen.arr,
+            arr_size: randGen.arr.size
+        }
         t0 = time.time()
-        #include code
+        tens.calculate_action_tf(S, placeholder_dict, "Roll")
         tf = time.time() - t0
         time_values.append(tf)
     if not disable_pyconv:
@@ -85,10 +90,7 @@ def main():
         time_values.append(tf)
     if not disable_tFconv:
         labels.append('Tensorflow Conv')
-        t0 = time.time()
-        #include code 
-        tf = time.time() - t0
-        time_values.append(tf)
+        time_values.append(tens.calculate_action_tf_convolve(CONST_m, randGen.arr))
 
     if show_chart:
         plot.plot_graph(labels, time_values)
