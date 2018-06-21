@@ -4,6 +4,8 @@ import TensorflowOps as to
 import RandomGenerator as rg
 import PlotGraphs as pg
 
+import tensorflow as tF ;
+
 import time
 
 import numpy as np
@@ -32,7 +34,7 @@ def main():
     parser.add_argument('-dtc', '-disable-tensorflow-convolve', help='Disable tensorflow convolve calculation', action='store_true')
     parser.add_argument('-p', '-printall', help='Print each action while calculating', action='store_true')
     parser.add_argument('-sc', '-showchart', help='Plot chart in the end', action='store_true')
-    
+
     args = parser.parse_args()
 
     noh = args.noh
@@ -95,8 +97,22 @@ def main():
     if show_chart:
         plot.plot_graph(labels, time_values)
 
+    with tF.Session() as sess:
+      grdo = tF.train.GradientDescentOptimizer(learning_rate = 0.01) ;
+      S,arrVar = tens.define_conv_action_alt(CONST_m, [noh, dim1,dim2, dim3, dim4]) ;
+      sess.run(tF.global_variables_initializer()) ;
+      S_val = sess.run(S)
 
-    
+      print(S_val) ;
+      print (S, arrVar) ;
+      updateOp = grdo.minimize(S, var_list=[arrVar]) ;
+      for step in range(0,100000):
+        retList = sess.run([updateOp, S]) ;
+        print (retList[1]) ;
+
+
+
+
     # define_lattice()
     # STF,plTF = define_tf_graph()
     # tf_conv, placeholder_conv, placeholder_kernel_t, placeholder_kernel_x, \

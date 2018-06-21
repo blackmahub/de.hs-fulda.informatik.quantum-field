@@ -6,7 +6,7 @@ import numpy as np
 import time as t
 
 class TensorflowOps:
-    sess = tF.InteractiveSession()
+    #sess = tF.InteractiveSession()
 
     def __init__(self):
         pass
@@ -43,6 +43,37 @@ class TensorflowOps:
         # print("S_TF_%s: %s" % (action_name, str(tf_action)))
         return tf_action
 
+    # todo: precompute kernels on gpu and put that into gloabl_variables_initializer
+    def define_conv_action_alt(self, CONST_m, arrShape):
+        kernel_shape = arrShape
+
+        kernel_t = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_t[:, 0:3, 0, 0, 0] = [1, -2, 1]
+        kernel_x = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_x[:, 0, 0:3, 0, 0] = [1, -2, 1]
+        kernel_y = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_y[:, 0, 0, 0:3, 0] = [1, -2, 1]
+        kernel_z = np.zeros(kernel_shape, dtype=np.float32)
+        kernel_z[:, 0, 0, 0, 0:3] = [1, -2, 1]
+
+        imag_zeros = np.zeros(kernel_shape, dtype=np.float32)
+
+        arrVar = tF.Variable(initial_value=tF.random_uniform(arrShape, -1,1, dtype=tF.float32)) ;
+
+        arr_fft = tF.fft(tF.complex(arrVar, imag_zeros), name="arr_fft")
+
+        conv_axis_1 = tF.multiply(tF.fft(tF.complex(kernel_t, imag_zeros)), arr_fft, name="conv_axis_1")
+        conv_axis_2 = tF.multiply(tF.fft(tF.complex(kernel_x, imag_zeros)), arr_fft, name="conv_axis_2")
+        conv_axis_3 = tF.multiply(tF.fft(tF.complex(kernel_y, imag_zeros)), arr_fft, name="conv_axis_3")
+        conv_axis_4 = tF.multiply(tF.fft(tF.complex(kernel_z, imag_zeros)), arr_fft, name="conv_axis_4")
+
+        convRes = tF.real(tF.ifft(conv_axis_1+conv_axis_2+conv_axis_3+conv_axis_4)) ;
+
+        common = tF.multiply(arrVar * arrVar,(CONST_m ** 2 / 2) , name="common")
+        conv_action = tF.reduce_sum(convRes + common) / np.prod(arrShape) ;
+        #tF.global_variables_initializer();
+        return conv_action, arrVar ;
+
 
     def calculate_action_tf_convolve(self, CONST_m, arr):
         kernel_shape = arr.shape
@@ -66,10 +97,10 @@ class TensorflowOps:
         conv_axis_4 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_z, imag_zeros)))), name="conv_axis_4")
 
         common = tF.Variable(initial_value=arr * ((CONST_m ** 2 / 2) * arr), name="common")
+        conv_action = tF.reduce_sum(conv_axis_1 + conv_axis_2 + conv_axis_3 + conv_axis_4 + common) / arr.size
 
         self.sess.run(tF.global_variables_initializer())
 
-        conv_action = tF.reduce_sum(conv_axis_1 + conv_axis_2 + conv_axis_3 + conv_axis_4 + common) / arr.size
 
         t0 = t.time()
         result = self.sess.run(conv_action)
