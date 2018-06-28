@@ -9,6 +9,7 @@ import time
 import numpy as np
 import scipy as sp
 import argparse
+import tensorflow as tf ;
 
 
 # main function
@@ -32,7 +33,7 @@ def main():
     parser.add_argument('-dtc', '-disable-tensorflow-convolve', help='Disable tensorflow convolve calculation', action='store_true')
     parser.add_argument('-p', '-printall', help='Print each action while calculating', action='store_true')
     parser.add_argument('-sc', '-showchart', help='Plot chart in the end', action='store_true')
-    
+
     args = parser.parse_args()
 
     noh = args.noh
@@ -65,14 +66,14 @@ def main():
         labels.append('Loop')
         t0 = time.time()
         action_values.append(loop.calculate_action_loop(randGen.arr, CONST_m, print_all))
-        tf = time.time() - t0
-        time_values.append(tf)
+        _tf = time.time() - t0
+        time_values.append(_tf)
     if not disable_pyroll:
         labels.append('NumPy Roll')
         t0 = time.time()
         action_values.append(pyops.calculate_action_roll(randGen.arr, CONST_m, print_all))
-        tf = time.time() - t0
-        time_values.append(tf)
+        _tf = time.time() - t0
+        time_values.append(_tf)
     if not disable_tFroll:
         labels.append('Tensorflow Roll')
         S, arr, arr_size = tens.define_tf_roll_graph(CONST_m)
@@ -82,23 +83,25 @@ def main():
         }
         t0 = time.time()
         action_values.append(tens.calculate_action_tf_roll(S, placeholder_dict, print_all))
-        tf = time.time() - t0
-        time_values.append(tf)
+        _tf = time.time() - t0
+        time_values.append(_tf)
     if not disable_pyconv:
         labels.append('NumPy Conv')
         t0 = time.time()
         action_values.append(pyops.calculate_action_convolve(randGen.arr, CONST_m, print_all))
-        tf = time.time() - t0
-        time_values.append(tf)
+        _tf = time.time() - t0
+        time_values.append(_tf)
     if not disable_tFconv:
         labels.append('Tensorflow Conv')
         tens.define_conv_kernels(CONST_m, randGen.arr.shape, randGen.arr.size)
         conv_action = tens.define_conv_action_graph(CONST_m, randGen.arr)
+        # put the global var init BEFORE time measurement, and just once!
+        tens.sess.run(tf.global_variables_initializer());
         t0 = time.time()
         action_values.append(tens.calculate_action_tf_convolve(conv_action, print_all))
-        tf = time.time() - t0
-        time_values.append(tf)
-    
+        _tf = time.time() - t0
+        time_values.append(_tf)
+
     if print_all:
         print("SD from mean: "+str(np.std(action_values)))
 

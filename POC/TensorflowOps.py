@@ -6,9 +6,9 @@ import numpy as np
 import time as t
 
 class TensorflowOps:
-    sess = tf.InteractiveSession()
 
     def __init__(self):
+        self.sess = tf.InteractiveSession()
         pass
 
     def __del__(self):
@@ -80,20 +80,26 @@ class TensorflowOps:
 
 
     def define_conv_action_graph(self, CONST_m, arr):
+        self.arr = arr ;
+        # workz but very slow
+        #self.arrVar = tf.Variable(initial_value=arr, dtype=tf.float32, name="arr")
 
-        arrVar = tf.Variable(initial_value=arr, dtype=tf.float32, name="arr")
+        # create array variable on GPU, no transfer --> much faster
+        arrVar = tf.Variable(initial_value=tf.random_uniform(arr.shape, 0, 1, dtype=tf.float32)) ;
 
         arr_fft = tf.fft(tf.complex(arrVar, imag_zeros), name="arr_fft")
 
         conv_axis = tf.real(tf.ifft(tf.multiply(arr_fft, kernel_fft)), name="op_convolve_axis")
         common = tf.multiply(tf.multiply(arrVar, arrVar), tf.divide(tf.multiply(mass_tf, mass_tf), 2), name="op_common")
         conv_action = tf.divide(tf.reduce_sum(tf.add(conv_axis, common)), total_volume, name="graph_conv_action")
-        
+
         return conv_action
 
 
     def calculate_action_tf_convolve(self, graph, print_all):
-        self.sess.run(tf.global_variables_initializer())
+        # took kernel initialization out of time measurement. That was actually a huge perf boost
+        # as kernels should not be considered here, they can be loaded from disk one or similar
+        #self.sess.run(tf.global_variables_initializer())
         tf_action_conv = self.sess.run(graph)
         if print_all:
             print("S_TF_Conv: "+str(tf_action_conv))
