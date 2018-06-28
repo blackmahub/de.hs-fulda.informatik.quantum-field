@@ -49,6 +49,8 @@ class TensorflowOps:
 
     def define_conv_kernels(self, CONST_m, arrShape, arrSize):
 
+        kernel_size = [1, arrShape[1], arrShape[2], arrShape[3], arrShape[4]]
+
         global mass_tf
         mass_tf = tf.constant(CONST_m, dtype=tf.float32, name="const_mass")
 
@@ -71,7 +73,7 @@ class TensorflowOps:
         ]
 
         values = [1, -2, 1, -2, 1, -2, 1, -2, 1]
-        kernel = tf.cast(tf.sparse_tensor_to_dense(tf.SparseTensor(indices, values, arrShape)), tf.float32, name="kernel")
+        kernel = tf.cast(tf.sparse_tensor_to_dense(tf.SparseTensor(indices, values, kernel_size)), tf.float32, name="kernel")
 
         global kernel_fft
         kernel_fft = tf.Variable(initial_value=tf.fft(tf.complex(kernel, imag_zeros)), name="var_kernel_fft")
