@@ -24,7 +24,7 @@ def main():
     CONST_m = 1
 
     parser = argparse.ArgumentParser(description="Calculate action of 4D Space Time Histories")
-    parser.add_argument('-n', '--noh', help='Number of random space time histories to generate', type=int, default=50)
+    parser.add_argument('-n', '--noh', help='Number of random space time histories to generate', type=int, default=5)
     parser.add_argument('-dim', '--dimensions', help='Sizes for each of the 4 dimensions', type=int, nargs=4, default=[20,20,20,20], metavar=('dim1', 'dim2', 'dim3', 'dim4'))
     parser.add_argument('-f', '--field', help='Field MIN and MAX', type=int, nargs=2, default=[-10,10], metavar=('min', 'max'))
     parser.add_argument('-dl', '-disable-loop', help='Disable loop calculation', action='store_true')
@@ -92,7 +92,12 @@ def main():
         time_values.append(tf)
     if not disable_tFconv:
         labels.append('Tensorflow Conv')
-        time_values.append(tens.calculate_action_tf_convolve(CONST_m, randGen.arr))
+        conv_action = tens.define_tf_convolve(CONST_m, randGen.arr)
+        placeholder_dict = {}
+        t0 = time.time()
+        tens.calculate_action_tf(conv_action, placeholder_dict, "Convolve")
+        tf = time.time() - t0
+        time_values.append(tf)
 
     if show_chart:
         plot.plot_graph(labels, time_values)

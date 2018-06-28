@@ -6,7 +6,7 @@ import numpy as np
 import time as t
 
 class TensorflowOps:
-    #sess = tF.InteractiveSession()
+    sess = tF.InteractiveSession()
 
     def __init__(self):
         pass
@@ -40,7 +40,7 @@ class TensorflowOps:
 
     def calculate_action_tf(self, S, placeholder_dict, action_name):
         tf_action = self.sess.run([S], feed_dict=placeholder_dict)[0]
-        # print("S_TF_%s: %s" % (action_name, str(tf_action)))
+        print("S_TF_%s: %s" % (action_name, str(tf_action)))
         return tf_action
 
     # todo: precompute kernels on gpu and put that into gloabl_variables_initializer
@@ -75,38 +75,36 @@ class TensorflowOps:
         return conv_action, arrVar ;
 
 
-    def calculate_action_tf_convolve(self, CONST_m, arr):
-        kernel_shape = arr.shape
+    def define_tf_convolve(self, CONST_m, arr):
 
-        kernel_t = np.zeros(kernel_shape, dtype=np.float32)
-        kernel_t[:, 0:3, 0, 0, 0] = [1, -2, 1]
-        kernel_x = np.zeros(kernel_shape, dtype=np.float32)
-        kernel_x[:, 0, 0:3, 0, 0] = [1, -2, 1]
-        kernel_y = np.zeros(kernel_shape, dtype=np.float32)
-        kernel_y[:, 0, 0, 0:3, 0] = [1, -2, 1]
-        kernel_z = np.zeros(kernel_shape, dtype=np.float32)
-        kernel_z[:, 0, 0, 0, 0:3] = [1, -2, 1]
+        kernel_shape = [1, arr.shape[1], arr.shape[2], arr.shape[3], arr.shape[4]]
 
-        imag_zeros = np.zeros(kernel_shape, dtype=np.float32)
+        arr_tf = tF.constant(arr, name="const_arr")
 
-        arr_fft = tF.Variable(initial_value=tF.fft(tF.complex(arr, imag_zeros)), name="arr_fft")
+        kernel_t = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor([[0, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 2, 0, 0, 0]], [1, -2, 1], kernel_shape)), tF.float32)
+        kernel_x = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor([[0, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 2, 0, 0]], [1, -2, 1], kernel_shape)), tF.float32)
+        kernel_y = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor([[0, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 2, 0]], [1, -2, 1], kernel_shape)), tF.float32)
+        kernel_z = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor([[0, 0, 0, 0, 0], [0, 0, 0, 0, 1], [0, 0, 0, 0, 2]], [1, -2, 1], kernel_shape)), tF.float32)
 
-        conv_axis_1 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_t, imag_zeros)))), name="conv_axis_1")
-        conv_axis_2 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_x, imag_zeros)))), name="conv_axis_2")
-        conv_axis_3 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_y, imag_zeros)))), name="conv_axis_3")
-        conv_axis_4 = tF.Variable(initial_value=tF.real(tF.ifft(arr_fft.initialized_value() * tF.fft(tF.complex(kernel_z, imag_zeros)))), name="conv_axis_4")
+        imag_zeros = tF.zeros(kernel_shape)
 
-        common = tF.Variable(initial_value=arr * ((CONST_m ** 2 / 2) * arr), name="common")
-        conv_action = tF.reduce_sum(conv_axis_1 + conv_axis_2 + conv_axis_3 + conv_axis_4 + common) / arr.size
+        kernel_t_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel_t, imag_zeros)), name="var_kernel_t_fft")
+        kernel_x_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel_x, imag_zeros)), name="var_kernel_x_fft")
+        kernel_y_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel_y, imag_zeros)), name="var_kernel_y_fft")
+        kernel_z_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel_z, imag_zeros)), name="var_kernel_z_fft")
 
         self.sess.run(tF.global_variables_initializer())
 
+        arr_fft = tF.fft(tF.complex(arr_tf, imag_zeros), name="op_arr_fft")
+        conv_axis_1 = tF.multiply(arr_fft, kernel_t_fft, name="op_conv_axis_1")
+        conv_axis_2 = tF.multiply(arr_fft, kernel_x_fft, name="op_conv_axis_2")
+        conv_axis_3 = tF.multiply(arr_fft, kernel_y_fft, name="op_conv_axis_3")
+        conv_axis_4 = tF.multiply(arr_fft, kernel_z_fft, name="op_conv_axis_4")
 
-        t0 = t.time()
-        result = self.sess.run(conv_action)
-        tf = t.time() - t0
+        convRes = tF.real(tF.ifft(conv_axis_1 + conv_axis_2 + conv_axis_3 + conv_axis_4))
 
-        # print("TF Conv: %s" % str(result))
+        common = tF.multiply(arr_tf * arr_tf, (CONST_m ** 2 / 2), name="op_common")
+        conv_action = tF.reduce_sum(convRes + common) / arr.size
 
-        return tf
+        return conv_action
 
