@@ -31,9 +31,10 @@ class PyOps:
             S= total.sum() / (dim1 * dim2 * dim3 * dim4)
 
             Sum.append(S)
+        avg = sum(Sum)/float(len(Sum))        
         if show_msg:
-            print("S_Roll: " + str(Sum))
-        return Sum
+            print("S_Roll: " + str(avg))
+        return avg
 
     # calculating using convolution
     def calculate_action_convolve(self, arr, CONST_m, show_msg):
@@ -48,6 +49,7 @@ class PyOps:
             common =  arr[n,:,:,:] * ((CONST_m**2/2) * arr[n,:,:,:])
             S = (convarrt + convarrx + convarry + convarrz + common).sum() / (dim1 * dim2 * dim3 * dim4)
             Sum.append(S)
+        avg = sum(Sum)/float(len(Sum))        
         if show_msg:        
-            print("S_Convolve: " + str(Sum))
-        return Sum
+            print("S_Convolve: " + str(avg))
+        return avg

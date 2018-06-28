@@ -19,6 +19,7 @@ class LoopOperations:
                             S += tFactor + xFactor + yFactor + zFactor - (8 * arr[n, t,x,y,z]) + (CONST_m**2/2)*(arr[n, t,x,y,z]**2)
             S /= (dim1 * dim2 * dim3 * dim4)
             Sum.append(S)
+        avg = sum(Sum)/float(len(Sum))
         if show_msg:
-            print("S_Loop: "+ str(Sum))
-        return Sum
+            print("S_Loop: "+ str(avg))
+        return avg

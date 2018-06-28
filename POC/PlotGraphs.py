@@ -12,7 +12,7 @@ class PlotGraphs:
             rect = ax.bar(ind, values[ind], bar_width, 
                             alpha=opacity,
                             label=labels[ind])
-            self.autolabel(ax, rect)
+            self.__autolabel(ax, rect)
 
         ax.set_xlabel('Methods')
         ax.set_ylabel('Times (in s)')
@@ -25,7 +25,7 @@ class PlotGraphs:
         plt.show()
 
     # Attach a text label above each bar displaying its height
-    def autolabel(self, ax, rects):
+    def __autolabel(self, ax, rects):
         for rect in rects:
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width() / 2., 1.005 * height,
