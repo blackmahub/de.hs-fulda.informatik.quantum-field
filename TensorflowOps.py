@@ -79,32 +79,33 @@ class TensorflowOps:
 
         kernel_shape = [1, arr.shape[1], arr.shape[2], arr.shape[3], arr.shape[4]]
 
-        arr_tf = tF.constant(arr, name="const_arr")
+        arr_tf = tF.constant(arr, dtype=tF.float32, name="const_arr")
+        mass_tf = tF.constant(CONST_m, dtype=tF.float32, name="const_mass")
+        imag_zeros = tF.constant(0, dtype=tF.float32, name="const_imag_zeros")
+        total_volume = tF.constant(arr.size, dtype=tF.float32, name="const_total_volume")
 
-        kernel_t = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor([[0, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 2, 0, 0, 0]], [1, -2, 1], kernel_shape)), tF.float32)
-        kernel_x = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor([[0, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 2, 0, 0]], [1, -2, 1], kernel_shape)), tF.float32)
-        kernel_y = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor([[0, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 2, 0]], [1, -2, 1], kernel_shape)), tF.float32)
-        kernel_z = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor([[0, 0, 0, 0, 0], [0, 0, 0, 0, 1], [0, 0, 0, 0, 2]], [1, -2, 1], kernel_shape)), tF.float32)
+        indices = [
+            [0, 0, 0, 0, 0],  # for all axis
+            [0, 0, 0, 0, 1],  # for axis 4
+            [0, 0, 0, 0, 2],  # for axis 4
+            [0, 0, 0, 1, 0],  # for axis 3
+            [0, 0, 0, 2, 0],  # for axis 3
+            [0, 0, 1, 0, 0],  # for axis 2
+            [0, 0, 2, 0, 0],  # for axis 2
+            [0, 1, 0, 0, 0],  # for axis 1
+            [0, 2, 0, 0, 0]   # for axis 1
+        ]
+        values = [1, -2, 1, -2, 1, -2, 1, -2, 1]
+        kernel = tF.cast(tF.sparse_tensor_to_dense(tF.SparseTensor(indices, values, kernel_shape)), tF.float32, name="kernel")
 
-        imag_zeros = tF.zeros(kernel_shape)
-
-        kernel_t_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel_t, imag_zeros)), name="var_kernel_t_fft")
-        kernel_x_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel_x, imag_zeros)), name="var_kernel_x_fft")
-        kernel_y_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel_y, imag_zeros)), name="var_kernel_y_fft")
-        kernel_z_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel_z, imag_zeros)), name="var_kernel_z_fft")
+        kernel_fft = tF.Variable(initial_value=tF.fft(tF.complex(kernel, imag_zeros)), name="var_kernel_fft")
 
         self.sess.run(tF.global_variables_initializer())
 
         arr_fft = tF.fft(tF.complex(arr_tf, imag_zeros), name="op_arr_fft")
-        conv_axis_1 = tF.multiply(arr_fft, kernel_t_fft, name="op_conv_axis_1")
-        conv_axis_2 = tF.multiply(arr_fft, kernel_x_fft, name="op_conv_axis_2")
-        conv_axis_3 = tF.multiply(arr_fft, kernel_y_fft, name="op_conv_axis_3")
-        conv_axis_4 = tF.multiply(arr_fft, kernel_z_fft, name="op_conv_axis_4")
-
-        convRes = tF.real(tF.ifft(conv_axis_1 + conv_axis_2 + conv_axis_3 + conv_axis_4))
-
-        common = tF.multiply(arr_tf * arr_tf, (CONST_m ** 2 / 2), name="op_common")
-        conv_action = tF.reduce_sum(convRes + common) / arr.size
+        conv_axis = tF.real(tF.ifft(tF.multiply(arr_fft, kernel_fft)), name="op_convolve_axis")
+        common = tF.multiply(tF.multiply(arr_tf, arr_tf), tF.divide(tF.multiply(mass_tf, mass_tf), 2), name="op_common")
+        conv_action = tF.divide(tF.reduce_sum(tF.add(conv_axis, common)), total_volume, name="graph_conv_action")
 
         return conv_action
 
