@@ -1,15 +1,12 @@
 import LoopOps as lo
 import PyOps as po
 import TensorflowOps as to
-import RandomGenerator as rg
 import PlotGraphs as pg
 
 import time
 
 import numpy as np
-import scipy as sp
 import argparse
-import tensorflow as tf ;
 
 
 # main function
@@ -18,7 +15,6 @@ def main():
     loop = lo.LoopOperations()
     pyops = po.PyOps()
     plot = pg.PlotGraphs()
-    tens = to.TensorflowOps()
 
     CONST_m = 1
 
@@ -55,48 +51,46 @@ def main():
 
     show_chart = args.sc
 
-    randGen = rg.RandomHistoryGenerator(noh, dim1, dim2, dim3, dim4, field_min, field_max)
-
     labels = []
     time_values = []
 
     action_values = []
 
+    tens = to.TensorflowOps(CONST_m, field_min, field_max, [noh, dim1, dim2, dim3, dim4])
+    tens.initialize_tensorflow_variables()
+    arr = tens.arrVar.eval(tens.sess)
+
     if not disable_loop:
         labels.append('Loop')
         t0 = time.time()
-        action_values.append(loop.calculate_action_loop(randGen.arr, CONST_m, print_all))
+        action_values.append(loop.calculate_action_loop(arr, CONST_m, print_all))
         _tf = time.time() - t0
         time_values.append(_tf)
     if not disable_pyroll:
         labels.append('NumPy Roll')
         t0 = time.time()
-        action_values.append(pyops.calculate_action_roll(randGen.arr, CONST_m, print_all))
+        action_values.append(pyops.calculate_action_roll(arr, CONST_m, print_all))
         _tf = time.time() - t0
         time_values.append(_tf)
     if not disable_tFroll:
         labels.append('Tensorflow Roll')
-        S, arr, arr_size = tens.define_tf_roll_graph(CONST_m)
-        placeholder_dict = {
-            arr: randGen.arr,
-            arr_size: randGen.arr.size
-        }
+        S = tens.define_tf_roll_graph()
         t0 = time.time()
-        action_values.append(tens.calculate_action_tf_roll(S, placeholder_dict, print_all))
+        action_values.append(tens.calculate_action_tf_roll(S, print_all))
         _tf = time.time() - t0
         time_values.append(_tf)
     if not disable_pyconv:
         labels.append('NumPy Conv')
         t0 = time.time()
-        action_values.append(pyops.calculate_action_convolve(randGen.arr, CONST_m, print_all))
+        action_values.append(pyops.calculate_action_convolve(arr, CONST_m, print_all))
         _tf = time.time() - t0
         time_values.append(_tf)
     if not disable_tFconv:
         labels.append('Tensorflow Conv')
-        tens.define_conv_kernels(CONST_m, randGen.arr.shape, randGen.arr.size)
-        conv_action = tens.define_conv_action_graph(CONST_m, randGen.arr)
+        tens.define_conv_kernels()
+        conv_action = tens.define_conv_action_graph()
         # put the global var init BEFORE time measurement, and just once!
-        tens.sess.run(tf.global_variables_initializer());
+        tens.initialize_tensorflow_variables()
         t0 = time.time()
         action_values.append(tens.calculate_action_tf_convolve(conv_action, print_all))
         _tf = time.time() - t0

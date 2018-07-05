@@ -1,6 +1,5 @@
 import ActionCalc as ac
 import Plotter as pt
-import csv
 import pandas as pd
 
 import argparse
@@ -18,7 +17,6 @@ def main():
     parser.add_argument('-f', '--field', help='Field MIN and MAX', type=float, nargs=2, default=[-1,1], metavar=('min', 'max'))
     parser.add_argument('-p', '-printall', help='Print each action while calculating', action='store_true')
     parser.add_argument('-sc', '-showchart', help='Plot chart in the end', action='store_true')
-    
     args = parser.parse_args()
 
     noh = args.noh
@@ -37,8 +35,8 @@ def main():
     interesting = calc.calculate_action(CONST_m, field_min, field_max, [noh, dim1,dim2, dim3, dim4])
     # print(interesting)
 
-    if show_chart:
-        plot.plot_graph(interesting)
+    # if show_chart:
+    plot.plot_graph(interesting)
         
 
 
