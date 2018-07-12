@@ -32,18 +32,21 @@ class PlotGraphs:
 
         # XY Plane
         fig,axis = plt.subplots(ncols=2)
+        plt.suptitle("XY Planes")
         axis[0].imshow(values[0][0,0,:,:,0])
         axis[1].imshow(values[1][0,0,:,:,0])
         plt.show()
 
         # YZ Plane
         fig,axis = plt.subplots(ncols=2)
+        plt.suptitle("YZ Planes")
         axis[0].imshow(values[0][0,0,0,:,:])
         axis[1].imshow(values[1][0,0,0,:,:])
         plt.show()
 
-        # ZX Plane
+        # XZ Plane
         fig,axis = plt.subplots(ncols=2)
+        plt.suptitle("XZ Planes")
         axis[0].imshow(values[0][0,0,:,0,:])
         axis[1].imshow(values[1][0,0,:,0,:])
         plt.show()
