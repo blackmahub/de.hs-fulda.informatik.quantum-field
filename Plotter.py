@@ -33,22 +33,40 @@ class PlotGraphs:
         # XY Plane
         fig,axis = plt.subplots(ncols=2)
         plt.suptitle("XY Planes")
-        axis[0].imshow(values[0][0,0,:,:,0])
+        im = axis[0].imshow(values[0][0,0,:,:,0])
+        axis[0].set_ylabel("X")
+        axis[0].set_xlabel("Y")
         axis[1].imshow(values[1][0,0,:,:,0])
+        axis[1].set_xlabel("Y")
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        fig.colorbar(im, cax=cbar_ax)
         plt.show()
 
         # YZ Plane
         fig,axis = plt.subplots(ncols=2)
         plt.suptitle("YZ Planes")
-        axis[0].imshow(values[0][0,0,0,:,:])
+        im = axis[0].imshow(values[0][0,0,0,:,:])
+        axis[0].set_ylabel("Y")
+        axis[0].set_xlabel("Z")
         axis[1].imshow(values[1][0,0,0,:,:])
+        axis[1].set_xlabel("Z")
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        fig.colorbar(im, cax=cbar_ax)
         plt.show()
 
         # XZ Plane
         fig,axis = plt.subplots(ncols=2)
         plt.suptitle("XZ Planes")
-        axis[0].imshow(values[0][0,0,:,0,:])
+        im = axis[0].imshow(values[0][0,0,:,0,:])
+        axis[0].set_ylabel("X")
+        axis[0].set_xlabel("Z")
         axis[1].imshow(values[1][0,0,:,0,:])
+        axis[1].set_xlabel("Z")
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        fig.colorbar(im, cax=cbar_ax)
         plt.show()
         
 
